@@ -3,9 +3,12 @@ const mongoose = require("mongoose");
 // Define the post schema
 mongoose.connect("mongodb://127.0.0.1:27017/newcollection");
 const postSchema = new mongoose.Schema({
-  text: {
+  imageText: {
     type: String,
     required: true,
+  },
+  image: {
+    type: String,
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,

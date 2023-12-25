@@ -3,8 +3,10 @@ var router = express.Router();
 const UserModel = require("./users");
 const PostModel = require("./post");
 
-const passport = require("passport");
+const multer = require("multer");
+const upload = require("./multer");
 
+const passport = require("passport");
 const localStrategy = require("passport-local");
 passport.use(new localStrategy(UserModel.authenticate()));
 
@@ -12,16 +14,49 @@ passport.use(new localStrategy(UserModel.authenticate()));
 router.get("/", function (req, res, next) {
   res.render("index", { title: "Express" });
 });
+
 router.get("/login", function (req, res, next) {
   res.render("login", { error: req.flash("error") });
 });
+
 router.get("/feed", function (req, res, next) {
   res.render("feed");
 });
+
+router.post(
+  "/upload",
+  isLoggedIn,
+  upload.single("file"),
+  async function (req, res, next) {
+    if (!req.file) {
+      return res.status(400).send("no file found");
+    }
+    // res.send("upload success");
+    // jo  file upload hue  hai use save kro as a post and uska postid user ko do and post ko userid do
+    const user = await UserModel.findOne({
+      username: req.session.passport.user,
+    }); //login user info
+    const post = await PostModel.create({
+      image: req.file.filename,
+      imageText: req.body.filecaption,
+      user: user._id,
+    }); //informed post which user has created it
+
+    user.posts.push(post._id);
+    await user.save();
+    res.redirect("/profile");
+  }
+);
+
 ///profile will not open it u r loggedin
-router.get("/profile", isLoggedIn, (req, res) => {
-  res.render("profile");
+router.get("/profile", isLoggedIn, async (req, res) => {
+  const user = await UserModel.findOne({
+    username: req.session.passport.user,
+  }).populate("posts"); //login ke bad yahape username aayega
+  // console.log(user);
+  res.render("profile", { user });
 });
+
 router.post("/register", (req, res) => {
   const { username, email, fullname } = req.body;
   const userData = new UserModel({ username, email, fullname });
@@ -42,6 +77,7 @@ router.post(
   }),
   (req, res) => {}
 );
+
 router.get("/logout", function (req, res) {
   req.logout(function (err) {
     if (err) {
